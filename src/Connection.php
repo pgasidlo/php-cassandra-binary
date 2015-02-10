@@ -64,18 +64,27 @@ class Connection {
 		return $this->getResponse();
 	}
 
+	private function connectionException()
+	{
+		$error = socket_last_error($this->connection);
+		throw new ConnectionException("Connection error ({$error})");
+	}
+
 	/**
 	 * @param $length
 	 * @throws Exception\ConnectionException
 	 * @return string
 	 */
 	private function fetchData($length) {
-		$data = socket_read($this->connection, $length);
-		while (strlen($data) < $length) {
-			$data .= socket_read($this->connection, $length);
-		}
-		if (socket_last_error($this->connection) == 110) {
-			throw new ConnectionException('Connection timed out');
+		$data = "";
+		$length_left = $length;
+		while ($length_left > 0) {
+			$data_slice = @socket_read($this->connection, $length_left);
+			if ($data_slice === FALSE) {
+				return $this->connectionException();
+			}
+			$data .= $data_slice;
+			$length_left -= strlen($data_slice);
 		}
 
 		return $data;
