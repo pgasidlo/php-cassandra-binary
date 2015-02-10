@@ -31,10 +31,13 @@ class Connection {
 		$this->cluster = $cluster;
 	}
 
-	public function connect() {
+	/**
+	 * @param array $options
+	*/
+	public function connect(array $options = []) {
 		try {
 			$this->node = $this->cluster->getRandomNode();
-			$this->connection = $this->node->getConnection();
+			$this->connection = $this->node->getConnection($options);
 		} catch (ConnectionException $e) {
 			$this->connect();
 		}
