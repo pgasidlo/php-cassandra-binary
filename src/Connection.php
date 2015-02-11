@@ -83,7 +83,7 @@ class Connection {
 		$length_left = $length;
 		while ($length_left > 0) {
 			$data_slice = @socket_read($this->connection, $length_left);
-			if ($data_slice === FALSE || $data_slice === 0) {
+			if ($data_slice === FALSE || $data_slice === "") {
 				return $this->connectionException();
 			}
 			$data .= $data_slice;
