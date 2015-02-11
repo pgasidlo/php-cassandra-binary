@@ -27,7 +27,8 @@ class Database {
 	 * @var array
 	 */
 	private $options = [
-		'CQL_VERSION' => '3.0.0'
+		'CQL_VERSION' => '3.0.0',
+		'query_timeout' => 10.0,
 	];
 
 	/**
@@ -166,6 +167,13 @@ class Database {
 		}
 	}
 
+	private function _query_tick($query_start)
+	{
+		if (microtime(true) - $query_start > $this->options['query_timeout']) {
+			throw new ConnectionException("Query timeout");
+		}
+	}
+
 	/**
 	 * Send query into database
 	 * @param string $cql
@@ -176,6 +184,24 @@ class Database {
 	 * @return array|null
 	 */
 	public function query($cql, array $values = [], $consistency = ConsistencyEnum::CONSISTENCY_QUORUM) {
+
+		register_tick_function(array($this, '_query_tick'), microtime(true));
+
+		declare (ticks = 1) {
+			try {
+				$result = $this->_query($cql, $values, $consistency);
+			} catch (Exception $e) {
+				unregister_tick_function(array($this, '_query_tick'));
+				throw $e;
+			}
+		}
+
+		unregister_tick_function(array($this, '_query_tick'));
+
+		return $result;
+	}
+
+	private function _query($cql, array $values = [], $consistency = ConsistencyEnum::CONSISTENCY_QUORUM) {
 		if ($this->batchQuery && in_array(substr($cql, 0, 6), ['INSERT', 'UPDATE', 'DELETE'])) {
 			$this->appendQueryToStack($cql, $values);
 			return true;
