@@ -5,9 +5,6 @@ use evseevnn\Cassandra\Exception\ConnectionException;
 
 class Node {
 
-	const STREAM_TIMEOUT_MS = 10;
-	const STREAM_TIMEOUT_US = 0;
-
 	/**
 	 * @var string
 	 */
@@ -27,6 +24,7 @@ class Node {
 	 * @var array
 	 */
 	private $options = [
+		'timeout' => 1,
 		'username' => null,
 		'password' => null
 	];
@@ -54,23 +52,18 @@ class Node {
 	 * @throws \Exception
 	 */
 	public function getConnection(array $options = []) {
-		if (!empty($this->socket)) return $this->socket;
+		if (is_resource($this->socket)) return $this->socket;
 
 		$options = array_merge($this->options, $options);
 
-		$timeout = ["sec" => self::STREAM_TIMEOUT_MS, "usec" => self::STREAM_TIMEOUT_US];
-		if (isset($options['timeout'])) {
-			$timeout["sec"] = (int)$options['timeout'];
-			$timeout["usec"] = ($options['timeout'] - (int)$options['timeout']) * 1000000;
-		}
+		$timeout["sec"] = (int)$options['timeout'];
+		$timeout["usec"] = ($options['timeout'] - (int)$options['timeout']) * 1000000;
 
-		$this->socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-		socket_set_option($this->socket, getprotobyname('TCP'), TCP_NODELAY, 1);
-		socket_set_option($this->socket, SOL_SOCKET, SO_RCVTIMEO, $timeout);
-		socket_set_option($this->socket, SOL_SOCKET, SO_SNDTIMEO, $timeout);
-		if (!socket_connect($this->socket, $this->host, $this->port)) {
-			throw new ConnectionException("Unable to connect to Cassandra node: {$this->host}:{$this->port}");
+		$errno = $errstr = null;
+		if (!($this->socket = fsockopen($this->host, $this->port, $errno, $errstr, $timeout['sec'] ?: 1))) {
+			throw new ConnectionException("Connection error: fsockopen: {$this->host}:{$this->port}");
 		}
+		stream_set_timeout($this->socket, $timeout['sec'], $timeout['usec']);
 
 		return $this->socket;
 	}

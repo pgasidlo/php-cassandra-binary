@@ -47,7 +47,7 @@ class Connection {
 	 * @return bool
 	 */
 	public function disconnect() {
-		return socket_shutdown($this->connection);
+		return fclose($this->connection);
 	}
 
 	/**
@@ -63,14 +63,10 @@ class Connection {
 	 */
 	public function sendRequest(Request $request) {
 		$frame = new Frame(Enum\VersionEnum::REQUEST, $request->getType(), $request);
-		socket_write($this->connection, $frame);
+		if (@fwrite($this->connection, $frame) === FALSE) {
+			throw new ConnectionException("Connection error: fwrite");
+		}
 		return $this->getResponse();
-	}
-
-	private function connectionException()
-	{
-		$error = socket_last_error($this->connection);
-		throw new ConnectionException("Connection error ({$error})");
 	}
 
 	/**
@@ -82,9 +78,9 @@ class Connection {
 		$data = "";
 		$length_left = $length;
 		while ($length_left > 0) {
-			$data_slice = @socket_read($this->connection, $length_left);
+			$data_slice = @fread($this->connection, $length_left);
 			if ($data_slice === FALSE || $data_slice === "") {
-				return $this->connectionException();
+				throw new ConnectionException("Connection error: fread");
 			}
 			$data .= $data_slice;
 			$length_left -= strlen($data_slice);
