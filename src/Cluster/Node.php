@@ -26,7 +26,8 @@ class Node {
 	private $options = [
 		'timeout' => 1,
 		'username' => null,
-		'password' => null
+		'password' => null,
+		'persistent' => false
 	];
 
 	/**
@@ -60,7 +61,8 @@ class Node {
 		$timeout["usec"] = ($options['timeout'] - (int)$options['timeout']) * 1000000;
 
 		$errno = $errstr = null;
-		if (!($this->socket = @fsockopen($this->host, $this->port, $errno, $errstr, $timeout['sec'] ?: 1))) {
+		$function = $options['persistent'] ? 'pfsockopen' : 'fsockopen';
+		if (!($this->socket = @$function($this->host, $this->port, $errno, $errstr, $timeout['sec'] ?: 1))) {
 			throw new ConnectionException("Connection error: fsockopen: {$this->host}:{$this->port}");
 		}
 		stream_set_timeout($this->socket, $timeout['sec'], $timeout['usec']);

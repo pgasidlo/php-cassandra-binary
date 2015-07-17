@@ -58,6 +58,13 @@ class Connection {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function isReused() {
+		return (bool(@ftell($this->connection) > 0);
+	}
+
+	/**
 	 * @param Request $request
 	 * @return \evseevnn\Cassandra\Protocol\Response
 	 */

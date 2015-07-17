@@ -66,6 +66,7 @@ class Database {
 	public function connect() {
 		if ($this->connection->isConnected()) return true;
 		$this->connection->connect($this->options);
+		if ($this->connection->isReused()) return true;
 		$response = $this->connection->sendRequest(
 			RequestFactory::startup($this->options)
 		);
